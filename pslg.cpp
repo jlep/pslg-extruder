@@ -45,12 +45,6 @@ float PslgEdge::diamondAngle(const PslgVertex* v) const {
     return std::numeric_limits<float>::quiet_NaN();
 }
 
-float PslgEdge::angle(const PslgVertex* v) const {
-    if (v == v1) return ::angle(diff());
-    if (v == v2) return ::angle(-diff());
-    return std::numeric_limits<float>::quiet_NaN();
-}
-
 PslgVertex* PslgEdge::otherVertex(const PslgVertex* v) const {
     if (v == v1) return v2;
     if (v == v2) return v1;
@@ -76,26 +70,6 @@ std::array<Vec2f, 4> PslgEdge::cornerPoints() const {
             v1->p - n1
     };
 };
-
-Line2f PslgEdge::lineFrom(const PslgVertex* v) const {
-    return { v->p, otherVertex(v)->p - v->p };
-}
-
-Line2f PslgEdge::prevLine(const PslgVertex* v) const {
-    return v->prevEdge(this)->lineFrom(v);
-}
-
-Line2f PslgEdge::nextLine(const PslgVertex* v) const {
-    return v->nextEdge(this)->lineFrom(v);
-}
-
-PslgVertex* PslgEdge::prevVertex(const PslgVertex* v) const {
-    return v->prevEdge(this)->otherVertex(v);
-}
-
-PslgVertex* PslgEdge::nextVertex(const PslgVertex* v) const {
-    return v->prevEdge(this)->otherVertex(v);
-}
 
 Line2f PslgEdge::line() const {
     return {v1->p, v2->p - v1->p};

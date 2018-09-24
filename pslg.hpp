@@ -34,15 +34,9 @@ struct PslgEdge {
     PslgEdge(PslgVertex* v1, PslgVertex* v2, float thickness);
     Vec2f diff() const;
     float diamondAngle(const PslgVertex* v) const;
-    float angle(const PslgVertex* v) const;
     PslgVertex* otherVertex(const PslgVertex* v) const;
     std::array<Vec2f, 2> midPoints() const;
     std::array<Vec2f, 4> cornerPoints() const;
-    Line2f lineFrom(const PslgVertex* v) const;
-    Line2f prevLine(const PslgVertex* v) const;
-    Line2f nextLine(const PslgVertex* v) const;
-    PslgVertex* prevVertex(const PslgVertex* v) const;
-    PslgVertex* nextVertex(const PslgVertex* v) const;
     FixedVector<Vec2f, 10> miteredPoints() const;
     Line2f line() const;
 };
