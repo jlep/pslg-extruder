@@ -1,6 +1,3 @@
-//#include "Pslg.hpp"
-//#include "linmath.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <nanovg.h>
@@ -17,7 +14,6 @@
 #include <optional>
 
 #include "vec.hpp"
-//#include "pslg.hpp"
 
 GLFWwindow* window;
 NVGcontext* vg;
@@ -40,16 +36,6 @@ void initVertices() {
 struct PslgVertex;
 struct PslgEdge;
 struct Pslg;
-
-struct PslgJoint {
-    PslgVertex* lv;
-    PslgEdge* le;
-    PslgVertex* v;
-    PslgEdge* re;
-    PslgVertex* rv;
-    PslgJoint leftJoint() const;
-    PslgJoint rightJoint() const;
-};
 
 // edges have ccw ordering in right-handed coordinate system
 struct PslgVertex {
@@ -84,8 +70,6 @@ struct PslgVertex {
         }
         return nullptr;
     }
-
-    PslgJoint withRightEdge(PslgEdge* re) const;
 
     void setPoint(const Vec2f& p);
     void sortEdges();
@@ -190,97 +174,12 @@ struct PslgEdge {
         return v->prevEdge(this)->otherVertex(v);
     }
 
-    FixedVector<Vec2f, 6> miteredPoints2() const {
-        //this makes no sense
-        FixedVector<Vec2f, 6> ret;
-        ret.push_back(v1->p);
-
-        // one side at a time
-        //
-        // e1                                 e2
-        //     <-- m1  n1 --> <-- n2  m2 -->
-        // q1 ----- v1 ----------- v2 ----- q2
-        //          / \           / \
-        //        p1  u1         u2  p2
-        //          x r1           x r2
-        auto n1 = v2->p - v1->p;
-        auto n2 = v1->p - v2->p;
-        auto u1 = v1->p + thickness * normalized(rot90cw(n1));
-        auto u2 = v2->p + thickness * normalized(rot90ccw(n2));
-
-        auto e1 = v1->prevEdge(this);
-        auto q1 = e1->otherVertex(v1);
-        auto m1 = q1->p - v1->p;
-        auto p1 = v1->p;
-        if (det(m1, n1) == 0) {
-            // flat cap
-            m1 = rot90cw(n1);
-        } else {
-            p1 += e1->thickness * normalized(rot90ccw(m1));
-        }
-
-        auto e2 = v2->nextEdge(this);
-        auto q2 = e2->otherVertex(v2);
-        auto m2 = q2->p - v2->p;
-        auto p2 = v2->p;
-        if (det(n2, m2) == 0) {
-            // flat cap
-            m2 = rot90ccw(n2);
-        } else {
-            p2 += e2->thickness * normalized(rot90cw(m2));
-        }
-
-        // intersections
-        auto r1 = lineIntersect(p1, m1, u1, n1);
-        auto r2 = lineIntersect(u2, n2, p2, m2);
-
-        // forms cup ?
-        //if
-
-        auto x1 = u1 + r1[1] * n1;
-        auto x2 = u2 + r2[0] * n2;
-
-        ret.push_back(x1);
-        ret.push_back(x2);
-        ret.push_back(v2->p);
-        return ret;
-    };
-
-    FixedVector<Vec2f, 6> miteredPoints3() const;
-
     FixedVector<Vec2f, 10> miteredPoints() const;
 
     Line2f line() const {
         return {v1->p, v2->p - v1->p};
     }
 };
-
-PslgJoint PslgJoint::leftJoint() const {
-    auto e = lv->nextEdge(le);
-    return {
-            .lv = e->otherVertex(lv),
-            .le = e,
-            .v = lv,
-            .re = le,
-            .rv = v
-    };
-}
-
-PslgJoint PslgJoint::rightJoint() const {
-    auto e = rv->prevEdge(re);
-    return {
-            .lv = v,
-            .le = re,
-            .v = rv,
-            .re = e,
-            .rv = e->otherVertex(rv)
-    };
-}
-
-PslgJoint PslgVertex::withRightEdge(PslgEdge* re) const {
-    auto le = nextEdge(re);
-    return {};
-}
 
 float miterLimit = 2.0f;
 
@@ -477,148 +376,6 @@ FixedVector<Vec2f, 10> PslgEdge::miteredPoints() const {
     pts.push_back(v1->p);
     return pts;
 };
-
-FixedVector<Vec2f, 6> PslgEdge::miteredPoints3() const {
-    FixedVector<Vec2f, 6> ret;
-    ret.push_back(v1->p);
-    // one side at a time
-    //
-    // e1                                 e2
-    //     <-- m1  n1 --> <-- n2  m2 -->
-    // q1 ----- v1 ----------- v2 ----- q2
-    //          / \           / \
-    //        p1  u1         u2  p2
-    //          x r1           x r2
-    //
-    //
-    //          x1 r1          x2 r2
-    //  e1    p1 u1          u2 p1  e2
-    //         \ /            \ /
-    // q1 ----- v1 ----------- v2 ------ q2
-    //   <--- m1  n1 --> <-- n2   m2 -->
-    //
-    auto n1 = v2->p - v1->p;
-    auto n2 = v1->p - v2->p;
-    auto du1 = thickness * normalized(rot90ccw(n1));
-    auto du2 = thickness * normalized(rot90cw(n2));
-    auto u1 = v1->p + du1;
-    auto u2 = v2->p + du2;
-
-    auto e1 = v1->nextEdge(this);
-    auto q1 = e1->otherVertex(v1);
-    auto m1 = q1->p - v1->p;
-    // holy grail, x1 direction
-    auto x1 = u1;
-
-    auto dp1 = e1->thickness * normalized(rot90cw(m1));
-    auto p1 = v1-> p + dp1;
-    auto r1 = lineIntersect(u1, n1, p1, m1);
-
-    // z1 is the starting point of the constraining line to x1
-    auto z1 = v1->p;
-    auto det1 = det(n1, m1);
-    if (det1 == 0) {
-        // do nothing
-    } else if (det1 < 0) {
-        if (r1.x >= 0) {
-            x1 = u1;
-        } else if (r1.y >= 0) {
-            auto s1 = lineIntersect(u1, n1, v1->p, dp1);
-            x1 = u1 + s1.x * n1;
-        } else {
-            x1 = u1 + r1.x * n1;
-            if (dist(v1->p, x1) > miterLimit * fmax(thickness, e1->thickness)) {
-                auto y1 = 0.5f * (p1 + u1);
-                z1 = y1;
-                x1 = u1;
-            }
-        }
-    } else {
-        auto dot1 = dot(n1, m1);
-        if (dot1 <= 0) {
-            // 90-180 degree
-            if (r1.x <= 0) {
-                x1 = u1;
-            } else if (r1.y <= 0) {
-                auto s1 = lineIntersect(u1, n1, v1->p, dp1);
-                x1 = u1 + s1.x * n1;
-            } else {
-                x1 = u1 + r1.x * n1;
-            }
-        } else {
-            x1 = u1 + r1.x * n1;
-        }
-    }
-
-    // neeeext...
-
-    auto e2 = v2->prevEdge(this);
-    auto q2 = e2->otherVertex(v2);
-    auto m2 = q2->p - v2->p;
-    auto x2 = u2;
-
-    auto dp2 = e2->thickness * normalized(rot90ccw(m2));
-    auto p2 = v2->p + dp2;
-    auto r2 = lineIntersect(u2, n2, p2, m2);
-
-    auto z2 = v2->p;
-    auto det2 = det(m2, n2);
-    if (det2 == 0) {
-        // do nothing
-    } else if (det2 < 0) {
-        if (r2.x >= 0) {
-            x2 = u2;
-        } else if (r2.y >= 0) {
-            auto s2 = lineIntersect(u2, n2, v2->p, dp2);
-            x2 = u2 + s2.x * n2;
-        } else {
-            x2 = u2 + r2.x * n2;
-            if (dist(v2->p, x2) > miterLimit * fmax(thickness, e2->thickness)) {
-                auto y2 = 0.5f * (p2 + u2);
-                z2 = y2;
-                x2 = u2;
-            }
-        }
-    } else {
-        auto dot2 = dot(m2, n2);
-        if (dot2 <= 0) {
-            // 90-180 degree
-            if (r2.x <= 0) {
-                x2 = u2;
-            } else if (r2.y <= 0) {
-                auto s2 = lineIntersect(u2, n2, v2->p, dp2);
-                x2 = u2 + s2.x * n2;
-            } else {
-                x2 = u2 + r2.x * n2;
-            }
-        } else {
-            x2 = u2 + r2.x * n2;
-        }
-    }
-
-    // check constraints
-    auto dz1 = x1 - z1;
-    auto dz2 = x2 - z2;
-    auto s2 = lineIntersect(z1, dz1, z2, dz2);
-    if (!isnil(s2) && s2.x > 0) {
-        auto s1 = lineIntersect(z1, dz1, u1, n1);
-        if (s1.x > s2.x) {
-            // TODO: check if z1-x1 etc. is intersected (hard to trigger)
-            if (z1 != v1->p) ret.push_back(z1);
-            ret.push_back(z1 + s2.x * dz1);
-            if (z2 != v2->p) ret.push_back(z2);
-            ret.push_back(v2->p);
-            return ret;
-        }
-    }
-    // stroke intersects closer, we're good
-    if (z1 != v1->p) ret.push_back(z1);
-    ret.push_back(x1);
-    ret.push_back(x2);
-    if (z2 != v2->p) ret.push_back(z2);
-    ret.push_back(v2->p);
-    return ret;
-}
 
 void PslgVertex::setPoint(const Vec2f& p) {
     if (this->p == p) return;
