@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cmath>
+#include <iostream>
+
 template <typename T>
 struct Vec2 {
     union {
