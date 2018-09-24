@@ -32,6 +32,7 @@ add_custom_command(
 
 add_executable(pslg_extruder
         main.cpp
+        vec.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/shaders.cpp
         pslg.hpp
         shader.hpp
