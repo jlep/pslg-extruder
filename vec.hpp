@@ -13,8 +13,8 @@ struct Vec2 {
         T c[2];
     };
 
-    Vec2(): x(0), y(0) {}
-    Vec2(T x, T y): x(x), y(y) {}
+    Vec2() noexcept : x(0), y(0) {}
+    Vec2(T x, T y) noexcept : x(x), y(y) {}
 
     bool operator==(const Vec2& v) const {
         return x == v.x && y == v.y;
@@ -211,6 +211,3 @@ template <typename T>
 T angle(const Vec2<T>& v) {
     return atan2(v.y, v.x);
 }
-
-using Vec2f = Vec2<float>;
-using Line2f = Line2<float>;

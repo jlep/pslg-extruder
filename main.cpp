@@ -18,20 +18,27 @@
 GLFWwindow* window;
 NVGcontext* vg;
 
-constexpr int nvertices = 16;
+using Float = float;
+using Size = size_t;
+using PslgVertexf = PslgVertex<Float>;
+using PslgEdgef = PslgEdge<Float>;
+using Pslgf = Pslg<Float>;
+using Vec2f = Vec2<Float>;
+
+constexpr size_t nvertices = 16;
 Vec2f polygon[nvertices] = {};
-constexpr float PI = 3.1415926f;
+constexpr Float PI = Float(3.1415926);
 
 void initVertices() {
-    for (int i = 0; i < nvertices; ++i) {
+    for (Size i = 0; i < nvertices; ++i) {
         auto& v = polygon[i];
-        float a = i * 2 * PI / nvertices;
+        Float a = i * 2 * PI / nvertices;
         v.x = 600 + cos(a) * 100;
         v.y = 200 + sin(a) * 100;
     }
 }
 
-Pslg pslg;
+Pslgf pslg;
 
 void initPslg() {
     auto v11 = pslg.addVertex(100, 100);
@@ -86,8 +93,8 @@ enum ToolAction {
 ToolAction toolAction = HOVERING;
 bool dirty = true;
 std::vector<std::unique_ptr<Handle>> handles;
-constexpr float handleRadius = 7;
-constexpr float handleRadius2 = handleRadius * handleRadius;
+constexpr Float handleRadius = 7;
+constexpr Float handleRadius2 = handleRadius * handleRadius;
 Handle* activeHandle = nullptr;
 Handle* controlHandle = nullptr;
 Vec2f selection_p1;
@@ -95,7 +102,7 @@ Vec2f selection_p2;
 
 class PslgVertexHandle : public AbstractHandle<PslgVertexHandle> {
 public:
-    explicit PslgVertexHandle(PslgVertex* v): v(v) {}
+    explicit PslgVertexHandle(PslgVertexf* v): v(v) {}
     void startMoving(const Vec2f& p) override {
         p0 = p;
         v0 = v->p;
@@ -106,7 +113,7 @@ public:
     Vec2f get() const override {
         return v->p;
     }
-    PslgVertex* v;
+    PslgVertexf* v;
     Vec2f p0;
     Vec2f v0;
 };
@@ -114,7 +121,7 @@ public:
 template <size_t I>
 class PslgThicknessHandle : public AbstractHandle<PslgThicknessHandle<I>> {
 public:
-    explicit PslgThicknessHandle(PslgEdge* e): e(e) {}
+    explicit PslgThicknessHandle(PslgEdgef* e): e(e) {}
     void startMoving(const Vec2f& p) override {}
     void move(const Vec2f& p) override {
         // don't do anything if there are other types of handles
@@ -126,13 +133,13 @@ public:
             if (t == PslgThicknessHandle<1>::typeinfo) continue;
             return;
         }
-        float d = e->line().distance(p);
-        e->thickness = d;
+        Float d = e->line().distance(p);
+        e->setThickness(d);
     }
     Vec2f get() const override {
         return std::get<I>(e->midPoints());
     }
-    PslgEdge* e;
+    PslgEdgef* e;
 };
 
 class Vec2fHandle : public AbstractHandle<Vec2fHandle> {
@@ -194,19 +201,19 @@ struct bbox {
                (pmin.y <= p.y) && (p.y <= pmax.y);
     }
 
-    float x() const {
+    Float x() const {
         return pmin.x;
     }
 
-    float y() const {
+    Float y() const {
         return pmin.y;
     }
 
-    float w() const {
+    Float w() const {
         return pmax.x - pmin.x;
     }
 
-    float h() const {
+    Float h() const {
         return pmax.y - pmin.y;
     }
 
@@ -234,7 +241,7 @@ Reverse<T> reverse(T& iterable) {
 
 void cursorPosCallback(GLFWwindow *window, double mx, double my)
 {
-    Vec2f mp = {(float) mx, (float) my};
+    Vec2f mp = {(Float) mx, (Float) my};
     switch (toolAction) {
     case HOVERING: {
         Handle *newActiveHandle = nullptr;
@@ -283,7 +290,7 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
     double mx, my;
     glfwGetCursorPos(window, &mx, &my);
-    Vec2f mp = {(float) mx, (float) my};
+    Vec2f mp = {(Float) mx, (Float) my};
     switch (toolAction) {
     case HOVERING:
         // action == GLFW_PRESS
@@ -325,11 +332,11 @@ void lineTo(const Vec2f& v) {
     nvgLineTo(vg, v.x, v.y);
 }
 
-void circle(const Vec2f& v, float radius) {
+void circle(const Vec2f& v, Float radius) {
     nvgCircle(vg, v.x, v.y, radius);
 }
 
-void drawObjects(float mx, float my) {
+void drawObjects(Float mx, Float my) {
     Vec2f mp = {mx, my};
     nvgStrokeWidth(vg, 1);
 
@@ -384,8 +391,8 @@ void drawObjects(float mx, float my) {
     for (const auto& edge : pslg.edges) {
         nvgStrokeWidth(vg, 1);
         nvgBeginPath(vg);
-        moveTo(edge->v1->p);
-        lineTo(edge->v2->p);
+        moveTo(edge->p1());
+        lineTo(edge->p2());
         nvgStrokeColor(vg, nvgRGBA(255, 255, 255, 255));
         nvgStroke(vg);
     }

@@ -2,6 +2,9 @@
 
 #include <GLFW/glfw3.h>
 
+#include <vector>
+#include <cstdio>
+
 GLuint loadShaders(const char *VertexSourcePointer, const char *FragmentSourcePointer) {
 
     // Create the shaders
