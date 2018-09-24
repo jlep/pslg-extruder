@@ -307,7 +307,7 @@ void miteredEdge(FixedVector<Vec2f, N>& pts, const PslgEdge* e0,
         // intersection with extra segment
         if (c2[0] != v2->p) {
             auto r3 = lineIntersect(c1[0], dc1, v2->p, c2[0] - v2->p);
-            if (r3.x < r1.x) {
+            if (r3.x > 0 && r3.x < r1.x) {
                 auto x = c1[0] + r3.x * dc1;
                 pts.push_back(x);
                 return;
@@ -337,8 +337,8 @@ void miteredEdge(FixedVector<Vec2f, N>& pts, const PslgEdge* e0,
             return;
         }
         // intersection with extra segment
-        auto r3 = lineIntersect(c2[0], dc2, v2->p, c2[0] - v2->p);
-        if (r3.x < r1.x) {
+        auto r3 = lineIntersect(c2[0], dc2, v1->p, c1[0] - v1->p);
+        if (r3.x > 0 && r3.x < r1.x) {
             auto x = c2[0] + r3.x * dc2;
             pts.push_back(x);
             return;
@@ -409,20 +409,23 @@ struct Pslg {
 Pslg pslg;
 
 void initPslg() {
-    auto v0 = pslg.addVertex(200, 100);
-    auto v1 = pslg.addVertex(100, 100);
-    auto v2 = pslg.addVertex(200, 200);
-    auto v3 = pslg.addVertex(300, 100);
-    auto v4 = pslg.addVertex(400, 100);
-    auto v5 = pslg.addVertex(400, 200);
-    auto v6 = pslg.addVertex(100, 200);
-    auto e1 = pslg.addEdge(v0, v1, 30);
-    auto e2 = pslg.addEdge(v0, v2, 30);
-    auto e3 = pslg.addEdge(v0, v3, 30);
-    auto e4 = pslg.addEdge(v3, v4, 30);
-    auto e5 = pslg.addEdge(v4, v5, 30);
-    auto e6 = pslg.addEdge(v2, v5, 30);
-    auto e7 = pslg.addEdge(v1, v6, 30);
+    auto v11 = pslg.addVertex(100, 100);
+    auto v12 = pslg.addVertex(200, 100);
+    auto v13 = pslg.addVertex(300, 100);
+    auto v14 = pslg.addVertex(400, 100);
+    auto e11 = pslg.addEdge(v12, v11, 30);
+    auto e12 = pslg.addEdge(v13, v12, 30);
+    auto e13 = pslg.addEdge(v14, v13, 30);
+
+    auto v21 = pslg.addVertex(100, 200);
+    auto v22 = pslg.addVertex(200, 200);
+    auto v23 = pslg.addVertex(300, 200);
+    auto v24 = pslg.addVertex(400, 200);
+    auto e21 = pslg.addEdge(v21, v22, 30);
+    auto e22 = pslg.addEdge(v22, v23, 30);
+    auto e23 = pslg.addEdge(v23, v24, 30);
+
+    auto e3 = pslg.addEdge(v12, v22, 30);
 }
 
 class Handle {
