@@ -48,7 +48,7 @@ struct PslgVertex {
     std::vector<Edge*> edges;
     V v;
 
-    explicit PslgVertex(float x, float y, V vertex = V()) :
+    explicit PslgVertex(T x, T y, V vertex = V()) :
             p(x, y), v(std::move(vertex)) {
     }
 
@@ -387,6 +387,45 @@ struct PslgEdge {
         pts.push_back(p1());
         return pts;
     };
+
+    template <typename B>
+    void triangulate(B& triangulation, const Vertex* v1, const Vertex* v2) const {
+        FixedVector<Vec2<T>, 4> pts;
+        miteredEdge(pts, v1, v2);
+        switch (pts.size) {
+        case 1:
+            addTriangle(triangulation, v1->p, v2->p, pts[0]);
+            break;
+        case 2:
+            addTriangle(triangulation, v1->p, v2->p, pts[1]);
+            addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            //triangulateQuad(triangulation, v1->p, v2->p, pts[1], pts[0]);
+            break;
+        case 3:
+            addTriangle(triangulation, v1->p, v2->p, pts[2]);
+            addTriangle(triangulation, v1->p, pts[2], pts[1]);
+            addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            //triangulatePentagon(triangulation, v1->p, v2->p, pts[2], pts[1], pts[0]);
+            break;
+        case 4:
+            // quad
+            addTriangle(triangulation, v1->p, v2->p, pts[2]);
+            addTriangle(triangulation, v1->p, pts[2], pts[1]);
+            // caps
+            addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            addTriangle(triangulation, v2->p, pts[3], pts[2]);
+            //triangulateQuad(triangulation, v1->p, v2->p, pts[2], pts[1]);
+            break;
+        default:
+            break;
+        }
+    }
+
+    template <typename B>
+    void triangulate(B& triangulation) const {
+        triangulate(triangulation, v1, v2);
+        triangulate(triangulation, v2, v1);
+    }
 };
 
 template <typename T = float, typename V = Empty, typename E = DefaultEdge<T>>
@@ -398,7 +437,7 @@ struct Pslg {
     std::vector<std::unique_ptr<Vertex>> verts;
     std::vector<std::unique_ptr<Edge>> edges;
 
-    Vertex* addVertex(float x, float y, V vertex = V()) {
+    Vertex* addVertex(T x, T y, V vertex = V()) {
         return verts.emplace_back(std::make_unique<Vertex>(x, y, std::move(vertex))).get();
     }
 

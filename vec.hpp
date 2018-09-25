@@ -211,3 +211,121 @@ template <typename T>
 T angle(const Vec2<T>& v) {
     return atan2(v.y, v.x);
 }
+
+/*               Return a positive value if the points pa, pb, and pc occur  */
+/*               in counterclockwise order; a negative value if they occur   */
+/*               in clockwise order; and zero if they are collinear.  The    */
+/*               result is also a rough approximation of twice the signed    */
+/*               area of the triangle defined by the three points.           */
+template <typename T>
+double orient2dfast(const Vec2<T>& pa, const Vec2<T>& pb, const Vec2<T>& pc)
+{
+    double acx, bcx, acy, bcy;
+
+    acx = pa.x - pc.x;
+    bcx = pb.x - pc.x;
+    acy = pa.y - pc.y;
+    bcy = pb.y - pc.y;
+    return acx * bcy - acy * bcx;
+}
+
+/*               Return a positive value if the point pd lies inside the     */
+/*               circle passing through pa, pb, and pc; a negative value if  */
+/*               it lies outside; and zero if the four points are cocircular.*/
+/*               The points pa, pb, and pc must be in counterclockwise       */
+/*               order, or the sign of the result will be reversed.          */
+template <typename T>
+double incirclefast(const Vec2<T>& pa, const Vec2<T>& pb, const Vec2<T>& pc, const Vec2<T>& pd)
+{
+    double adx, ady, bdx, bdy, cdx, cdy;
+    double abdet, bcdet, cadet;
+    double alift, blift, clift;
+
+    adx = pa.x - pd.x;
+    ady = pa.y - pd.y;
+    bdx = pb.x - pd.x;
+    bdy = pb.y - pd.y;
+    cdx = pc.x - pd.x;
+    cdy = pc.y - pd.y;
+
+    abdet = adx * bdy - bdx * ady;
+    bcdet = bdx * cdy - cdx * bdy;
+    cadet = cdx * ady - adx * cdy;
+    alift = adx * adx + ady * ady;
+    blift = bdx * bdx + bdy * bdy;
+    clift = cdx * cdx + cdy * cdy;
+
+    return alift * bcdet + blift * cadet + clift * abdet;
+}
+
+template <typename T>
+bool incircle(const Vec2<T>& pa, const Vec2<T>& pb, const Vec2<T>& pc, const Vec2<T>& pd) {
+    return incirclefast(pa, pb, pc, pd) * orient2dfast(pa, pb, pc) > 0;
+}
+
+// This is getting out of hand
+
+template <typename B, typename P>
+void addTriangle(B& triangulation, const P& p1, const P& p2, const P& p3) {
+}
+
+// assume that the quad is convex
+template <typename B, typename T>
+void triangulateQuad(B& triangulation,
+                     const Vec2<T> &p1,
+                     const Vec2<T> &p2,
+                     const Vec2<T> &p3,
+                     const Vec2<T> &p4
+) {
+    if (incircle(p1, p2, p3, p4)) {
+        addTriangle(triangulation, p2, p4, p1);
+        addTriangle(triangulation, p4, p2, p3);
+    } else {
+        addTriangle(triangulation, p1, p3, p4);
+        addTriangle(triangulation, p3, p1, p2);
+    }
+}
+
+template <std::size_t I, typename T, std::size_t N>
+struct GetMod {
+    const std::array<T, N>& array;
+    typedef typename std::array<T, N>::const_reference Value;
+    explicit GetMod(const std::array<T, N>& array): array(array) {}
+};
+
+template <std::size_t J, std::size_t I, typename T, std::size_t N>
+typename GetMod<I, T, N>::Value
+constexpr getMod(const GetMod<I, T, N>& g) {
+    return std::get<(I + J) % N>(g.array);
+};
+
+template <std::size_t I, typename B, typename P>
+bool tryTriangulate(B& triangulation, const std::array<const P*, 5>& points) {
+    GetMod<I, const P*, 5> p(points);
+    if (!incircle(*getMod<0>(p), *getMod<1>(p), *getMod<3>(p), *getMod<2>(p)) &&
+        !incircle(*getMod<0>(p), *getMod<1>(p), *getMod<3>(p), *getMod<4>(p))) {
+        addTriangle(triangulation, *getMod<0>(p), *getMod<1>(p), *getMod<3>(p));
+        addTriangle(triangulation, *getMod<1>(p), *getMod<2>(p), *getMod<3>(p));
+        addTriangle(triangulation, *getMod<3>(p), *getMod<4>(p), *getMod<0>(p));
+        return true;
+    }
+    return false;
+}
+
+// assume that the pentagon is convex
+template <typename B, typename P>
+void triangulatePentagon(B& triangulation,
+                         const P& p1,
+                         const P& p2,
+                         const P& p3,
+                         const P& p4,
+                         const P& p5) {
+    std::array<const P*, 5> p { &p1, &p2, &p3, &p4, &p5 };
+    if (tryTriangulate<0>(triangulation, p)) return;
+    if (tryTriangulate<1>(triangulation, p)) return;
+    if (tryTriangulate<2>(triangulation, p)) return;
+    if (tryTriangulate<3>(triangulation, p)) return;
+    if (tryTriangulate<4>(triangulation, p)) return;
+    // should not reach this point
+    assert(false);
+}

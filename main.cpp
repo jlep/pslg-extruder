@@ -11,7 +11,8 @@
 #include <limits>
 #include <array>
 #include <typeinfo>
-#include <optional>
+#include <random>
+#include <unordered_set>
 
 #include "pslg.hpp"
 
@@ -40,7 +41,60 @@ void initVertices() {
 
 Pslgf pslg;
 
+template <class T>
+inline void hash_combine(std::size_t & seed, const T & v)
+{
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6l) + (seed >> 2);
+}
+
+namespace std
+{
+    template<typename S, typename T> struct hash<pair<S, T>>
+    {
+        inline size_t operator()(const pair<S, T> & v) const
+        {
+            size_t seed = 0;
+            ::hash_combine(seed, v.first);
+            ::hash_combine(seed, v.second);
+            return seed;
+        }
+    };
+}
+
+template <typename T>
+void sort(T& a, T& b) {
+    if (a > b) {
+        std::swap(a, b);
+    }
+}
+
 void initPslg() {
+    /*
+    std::uniform_real_distribution<Float> unif(100, 400);
+    std::default_random_engine re(0);
+    std::vector<PslgVertexf*> vs;
+    for (Size i = 0; i < 100; ++i) {
+        auto x = unif(re);
+        auto y = unif(re);
+        vs.emplace_back(pslg.addVertex(x, y));
+    }
+    std::uniform_int_distribution<Size> unii(0, vs.size() - 1);
+    std::uniform_real_distribution<Float> unit(10, 10);
+    using Index = std::pair<Size, Size>;
+    std::unordered_set<Index> cs;
+    for (Size i = 0; i < 100; ++i) {
+        auto k1 = i % vs.size();
+        auto k2 = k1;
+        while (k1 == k2 || cs.find(Index(k1, k2)) != cs.end()) {
+            k2 = unii(re);
+            sort(k1, k2);
+        }
+        cs.emplace(k1, k2);
+        auto t = unit(re);
+        pslg.addEdge(vs[k1], vs[k2], t);
+    }
+     */
     auto v11 = pslg.addVertex(100, 100);
     auto v12 = pslg.addVertex(200, 100);
     auto v13 = pslg.addVertex(300, 100);
@@ -336,9 +390,26 @@ void circle(const Vec2f& v, Float radius) {
     nvgCircle(vg, v.x, v.y, radius);
 }
 
+struct Triangle {
+    Vec2f p1;
+    Vec2f p2;
+    Vec2f p3;
+};
+
+struct Triangulation {
+    FixedVector<Triangle, 8> triangles;
+};
+
+template <>
+void addTriangle<Triangulation, Vec2f>(Triangulation& t, const Vec2f& p1, const Vec2f& p2, const Vec2f& p3) {
+    t.triangles.push_back({p1, p2, p3});
+};
+
 void drawObjects(Float mx, Float my) {
     Vec2f mp = {mx, my};
     nvgStrokeWidth(vg, 1);
+    nvgLineJoin(vg, NVG_ROUND);
+    nvgLineCap(vg, NVG_ROUND);
 
     // draw polygon
     nvgBeginPath(vg);
@@ -366,10 +437,10 @@ void drawObjects(Float mx, Float my) {
         lineTo(rect[2]);
         lineTo(rect[3]);
         lineTo(rect[0]);
-        nvgFillColor(vg, nvgRGBA(100, 100, 255, 100));
-        nvgStrokeColor(vg, nvgRGBA(100, 100, 255, 200));
-        //nvgFill(vg);
-        //nvgStroke(vg);
+        nvgFillColor(vg, nvgRGBA(100, 100, 255, 30));
+        nvgStrokeColor(vg, nvgRGBA(100, 100, 255, 100));
+        nvgFill(vg);
+        nvgStroke(vg);
     }
 
     // extrusion
@@ -387,13 +458,28 @@ void drawObjects(Float mx, Float my) {
     }
 
     // segments
-
     for (const auto& edge : pslg.edges) {
         nvgStrokeWidth(vg, 1);
         nvgBeginPath(vg);
         moveTo(edge->p1());
         lineTo(edge->p2());
         nvgStrokeColor(vg, nvgRGBA(255, 255, 255, 255));
+        nvgStroke(vg);
+    }
+
+    // triangles
+    for (const auto& edge : pslg.edges) {
+        nvgBeginPath(vg);
+        Triangulation t;
+        edge->triangulate(t);
+        for (const auto& tri : t.triangles) {
+            moveTo(tri.p1);
+            lineTo(tri.p2);
+            lineTo(tri.p3);
+            nvgClosePath(vg);
+        }
+        nvgFillColor(vg, nvgRGBA(0, 0, 0, 100));
+        nvgStrokeColor(vg, nvgRGBA(0, 0, 0, 200));
         nvgStroke(vg);
     }
 
