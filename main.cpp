@@ -215,9 +215,11 @@ public:
 };
 
 void initHandles() {
+    /*
     for (auto* v = polygon; v != polygon + nvertices; ++v) {
         handles.emplace_back(std::make_unique<Vec2fHandle>(v));
     }
+     */
     for (const auto& e: pslg.edges) {
         handles.emplace_back(std::make_unique<PslgThicknessHandle<0>>(e.get()));
         handles.emplace_back(std::make_unique<PslgThicknessHandle<1>>(e.get()));
@@ -583,7 +585,7 @@ int main()
     glfwSetCursorPosCallback(window, cursorPosCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
-    initVertices();
+    //initVertices();
     initPslg();
     initHandles();
     draw();

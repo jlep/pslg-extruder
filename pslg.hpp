@@ -402,9 +402,16 @@ struct PslgEdge {
             //triangulateQuad(triangulation, v1->p, v2->p, pts[1], pts[0]);
             break;
         case 3:
-            addTriangle(triangulation, v1->p, v2->p, pts[2]);
-            addTriangle(triangulation, v1->p, pts[2], pts[1]);
-            addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            // simple check
+            if (dist(v1->p, pts[1]) < dist(v2->p, pts[1])) {
+                addTriangle(triangulation, v1->p, v2->p, pts[2]);
+                addTriangle(triangulation, v1->p, pts[2], pts[1]);
+                addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            } else {
+                addTriangle(triangulation, v2->p, pts[2], pts[1]);
+                addTriangle(triangulation, v1->p, v2->p, pts[1]);
+                addTriangle(triangulation, v1->p, pts[1], pts[0]);
+            }
             //triangulatePentagon(triangulation, v1->p, v2->p, pts[2], pts[1], pts[0]);
             break;
         case 4:
